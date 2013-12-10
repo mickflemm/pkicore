@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# A quick and dirty compile script
+
+rm *~ &> /dev/null
+rm *.o
+rm *.so.*
+rm *.so
+
+#Only OpenSSL for now, would love to add GnuTLS support also...
+LDFLAGS="${LDFLAGS} -lc -lldap"
+LDFLAGS="${LDFLAGS} "`pkg-config --libs openssl libcurl`
+CFLAGS="${CFLAGS}"`pkg-config --cflags openssl libcurl`
+CFLAGS="${CFLAGS} -fPIC -DPKICORE_OPENSSL -DPKICORE_LDAP -g"
+
+OBJS="pkicore.o pkicore_resget.o pkicore_pkcs11.o pkicore_input.o"
+OBJS="$OBJS pkicore_openssl_resget.o pkicore_openssl_extensions.o"
+OBJS="$OBJS pkicore_openssl_cert_verify.o pkicore_openssl_csr.o"
+OBJS="$OBJS pkicore_openssl_sign.o"
+
+gcc $CFLAGS -c pkicore_openssl_resget.c -o pkicore_openssl_resget.o $LDFLAGS
+gcc $CFLAGS -c pkicore_openssl_extensions.c -o pkicore_openssl_extensions.o $LDFLAGS
+gcc $CFLAGS -c pkicore_openssl_cert_verify.c -o pkicore_openssl_cert_verify.o $LDFLAGS
+gcc $CFLAGS -c pkicore_openssl_csr.c -o pkicore_openssl_csr.o $LDFLAGS
+gcc $CFLAGS -c pkicore_openssl_sign.c -o pkicore_openssl_sign.o $LDFLAGS
+gcc $CFLAGS -c pkicore_resget.c -o pkicore_resget.o $LDFLAGS
+gcc $CFLAGS -c pkicore_pkcs11.c -o pkicore_pkcs11.o $LDFLAGS
+gcc $CFLAGS -c pkicore_input.c -o pkicore_input.o $LDFLAGS
+gcc $CFLAGS -c pkicore.c -o pkicore.o
+gcc $CFLAGS -shared -Wl,-soname,libpkicore.so.0 -o libpkicore.so.0.1 $OBJS $LDFLAGS
+
+ln -s libpkicore.so.0.1 libpkicore.so.0
+ln -s libpkicore.so.0.1 libpkicore.so
+
+gcc -Wall -c pkitest.c -o pkitest.o
+
+gcc -L. -lpkicore -lcurl pkitest.o -o pkitest
